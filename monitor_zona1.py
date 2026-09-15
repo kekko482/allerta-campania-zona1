@@ -13,6 +13,7 @@ URL = "https://centrofunzionale.regione.campania.it/"
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = "5891919449"
 
+
 # ============================================================
 # TELEGRAM
 # ============================================================
@@ -54,16 +55,10 @@ def invia_telegram(messaggio):
 
 
 # ============================================================
-# FUNZIONI UTILI
+# ESTRAZIONE DATA E ORA VALIDITÀ
 # ============================================================
 
 def estrai_periodo_validita(testo):
-    """
-    Cerca nel testo della pagina una validità del tipo:
-
-    Valido dalle 14:00 del 15/09/2026
-    alle 14:00 del 16/09/2026
-    """
 
     schema = re.search(
         r"Valido\s+dalle\s+(\d{1,2}:\d{2})\s+del\s+"
@@ -85,11 +80,11 @@ def estrai_periodo_validita(testo):
     return None
 
 
+# ============================================================
+# RICERCA ZONA 1 NELLA MAPPA
+# ============================================================
+
 def stampa_elementi_zona1(page):
-    """
-    Cerca nella pagina elementi che potrebbero appartenere
-    alla mappa delle zone di allerta.
-    """
 
     print("")
     print("================================================")
@@ -105,7 +100,9 @@ def stampa_elementi_zona1(page):
     print("Elementi trovati per Zona 1:", numero)
 
     for i in range(numero):
+
         try:
+
             elemento = elementi.nth(i)
 
             print("")
@@ -117,39 +114,56 @@ def stampa_elementi_zona1(page):
                 print("Testo: non disponibile")
 
             try:
-                print("Tag:", elemento.evaluate(
-                    "(el) => el.tagName"
-                ))
+                print(
+                    "Tag:",
+                    elemento.evaluate(
+                        "(el) => el.tagName"
+                    )
+                )
             except:
                 print("Tag: non disponibile")
 
             try:
-                print("Classe:", elemento.get_attribute("class"))
+                print(
+                    "Classe:",
+                    elemento.get_attribute("class")
+                )
             except:
                 print("Classe: non disponibile")
 
             try:
-                print("ID:", elemento.get_attribute("id"))
+                print(
+                    "ID:",
+                    elemento.get_attribute("id")
+                )
             except:
                 print("ID: non disponibile")
 
             try:
-                print("Style:", elemento.get_attribute("style"))
+                print(
+                    "Style:",
+                    elemento.get_attribute("style")
+                )
             except:
                 print("Style: non disponibile")
 
             try:
-                print(
-                    "HTML:",
-                    elemento.evaluate(
-                        "(el) => el.outerHTML"
-                    )[:3000]
+                html = elemento.evaluate(
+                    "(el) => el.outerHTML"
                 )
+
+                print("HTML:")
+                print(html[:3000])
+
             except:
                 print("HTML: non disponibile")
 
         except Exception as errore:
-            print("Errore lettura elemento:", errore)
+
+            print(
+                "Errore lettura elemento:",
+                errore
+            )
 
 
 # ============================================================
@@ -162,8 +176,11 @@ print("================================================")
 
 print(
     "Ora del controllo:",
-    datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    datetime.now().strftime(
+        "%d/%m/%Y %H:%M:%S"
+    )
 )
+
 
 with sync_playwright() as p:
 
@@ -206,7 +223,7 @@ with sync_playwright() as p:
     print("Dimensione testo:", len(testo))
 
     # ========================================================
-    # PERIODO VALIDITÀ
+    # PERIODO DI VALIDITÀ
     # ========================================================
 
     periodo = estrai_periodo_validita(testo)
@@ -215,16 +232,19 @@ with sync_playwright() as p:
 
         print("")
         print("PERIODO DI VALIDITÀ TROVATO:")
+
         print(
             f"Dal {periodo['data_inizio']} "
             f"alle {periodo['ora_inizio']}"
         )
+
         print(
             f"Al {periodo['data_fine']} "
             f"alle {periodo['ora_fine']}"
         )
 
     else:
+
         print("")
         print("Periodo di validità non trovato.")
 
@@ -235,7 +255,7 @@ with sync_playwright() as p:
     stampa_elementi_zona1(page)
 
     # ========================================================
-    # SALVA PAGINA
+    # SALVA TESTO DELLA PAGINA
     # ========================================================
 
     with open(
@@ -246,6 +266,10 @@ with sync_playwright() as p:
 
         file.write(testo)
 
+    # ========================================================
+    # SALVA HTML DELLA PAGINA
+    # ========================================================
+
     with open(
         "pagina_centro_funzionale.html",
         "w",
@@ -255,6 +279,7 @@ with sync_playwright() as p:
         file.write(page.content())
 
     browser.close()
+
 
 print("")
 print("================================================")
