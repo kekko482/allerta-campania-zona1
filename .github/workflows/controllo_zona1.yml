@@ -1,28 +1,28 @@
-from playwright.sync_api import sync_playwright
-from datetime import datetime
+name: Controllo Zona 1
 
-URL = "https://centrofunzionale.regione.campania.it/"
+on:
+  workflow_dispatch:
 
-print("Controllo del sito ufficiale della Regione Campania...")
-print("Ora del controllo:", datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+jobs:
+  controllo:
+    runs-on: ubuntu-latest
 
-with sync_playwright() as p:
-    browser = p.chromium.launch(headless=True)
-    page = browser.new_page()
+    steps:
+      - name: Scarica repository
+        uses: actions/checkout@v4
 
-    page.goto(URL, wait_until="networkidle", timeout=60000)
+      - name: Controlla il sito regionale
+        run: python monitor_zona1.py
 
-    print("Pagina caricata correttamente.")
-    print("Titolo:", page.title())
+      - name: Mostra contenuto pagina
+        run: |
+          echo "=== INIZIO PAGINA ==="
+          head -c 10000 pagina_centro_funzionale.html
+          echo
+          echo "=== FINE PAGINA ==="
 
-    testo = page.locator("body").inner_text()
-
-    print("=== TESTO DELLA PAGINA ===")
-    print(testo[:15000])
-
-    with open("pagina_centro_funzionale.txt", "w", encoding="utf-8") as f:
-        f.write(testo)
-
-    browser.close()
-
-print("Controllo terminato.")
+      - name: Salva pagina come artefatto
+        uses: actions/upload-artifact@v4
+        with:
+          name: pagina-centro-funzionale
+          path: pagina_centro_funzionale.html
