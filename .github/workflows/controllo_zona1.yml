@@ -14,10 +14,12 @@ jobs:
       - name: Controlla il sito regionale
         run: python monitor_zona1.py
 
-      - name: Cerca informazioni Zona 1
+      - name: Mostra contenuto pagina
         run: |
-          echo "=== RICERCA ZONA 1 ==="
-          grep -oiE '.{0,150}(zona 1|zona1|allerta|verde|gialla|arancione|rossa).{0,250}' pagina_centro_funzionale.html | head -30
+          echo "=== INIZIO PAGINA ==="
+          head -c 10000 pagina_centro_funzionale.html
+          echo
+          echo "=== FINE PAGINA ==="
 
       - name: Salva pagina come artefatto
         uses: actions/upload-artifact@v4
