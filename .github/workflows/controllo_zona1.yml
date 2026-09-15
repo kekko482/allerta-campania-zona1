@@ -1,0 +1,20 @@
+name: Controllo Zona 1
+
+on:
+  workflow_dispatch:
+
+jobs:
+  controllo:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Scarica repository
+        uses: actions/checkout@v4
+
+      - name: Controlla il sito regionale
+        run: python monitor_zona1.py
+
+      - name: Mostra informazioni pagina
+        run: |
+          echo "Il controllo del sito è terminato."
+          ls -l
