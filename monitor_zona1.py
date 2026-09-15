@@ -4,63 +4,40 @@ import os
 import re
 import requests
 
-# ============================================================
-# CONFIGURAZIONE
-# ============================================================
-
 URL = "https://centrofunzionale.regione.campania.it/"
-
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = "5891919449"
 
 
-# ============================================================
-# TELEGRAM
-# ============================================================
-
 def invia_telegram(messaggio):
     if not TELEGRAM_BOT_TOKEN:
-        print("ERRORE: secret TELEGRAM_BOT_TOKEN non trovato.")
+        print("TELEGRAM_BOT_TOKEN non trovato.")
         return False
 
-    url = (
-        f"https://api.telegram.org/bot"
-        f"{TELEGRAM_BOT_TOKEN}/sendMessage"
-    )
-
-    dati = {
-        "chat_id": TELEGRAM_CHAT_ID,
-        "text": messaggio
-    }
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
 
     try:
         risposta = requests.post(
             url,
-            data=dati,
+            data={
+                "chat_id": TELEGRAM_CHAT_ID,
+                "text": messaggio
+            },
             timeout=30
         )
 
         print("Telegram:", risposta.status_code)
+        print(risposta.text)
 
-        if risposta.ok:
-            print("Messaggio Telegram inviato.")
-            return True
-
-        print("Errore Telegram:", risposta.text)
-        return False
+        return risposta.ok
 
     except Exception as errore:
-        print("Errore collegamento Telegram:", errore)
+        print("Errore Telegram:", errore)
         return False
 
 
-# ============================================================
-# ESTRAZIONE DATA E ORA VALIDITÀ
-# ============================================================
-
 def estrai_periodo_validita(testo):
-
-    schema = re.search(
+    risultato = re.search(
         r"Valido\s+dalle\s+(\d{1,2}:\d{2})\s+del\s+"
         r"(\d{1,2}/\d{1,2}/\d{4})\s+"
         r"alle\s+(\d{1,2}:\d{2})\s+del\s+"
@@ -69,129 +46,34 @@ def estrai_periodo_validita(testo):
         re.IGNORECASE
     )
 
-    if schema:
-        return {
-            "ora_inizio": schema.group(1),
-            "data_inizio": schema.group(2),
-            "ora_fine": schema.group(3),
-            "data_fine": schema.group(4)
-        }
+    if not risultato:
+        return None
 
-    return None
+    return {
+        "ora_inizio": risultato.group(1),
+        "data_inizio": risultato.group(2),
+        "ora_fine": risultato.group(3),
+        "data_fine": risultato.group(4)
+    }
 
-
-# ============================================================
-# RICERCA ZONA 1 NELLA MAPPA
-# ============================================================
-
-def stampa_elementi_zona1(page):
-
-    print("")
-    print("================================================")
-    print("RICERCA MAPPA ZONE")
-    print("================================================")
-
-    elementi = page.locator(
-        "text=/Zona\\s*1|ZONE\\s*1|ZONA\\s*1/i"
-    )
-
-    numero = elementi.count()
-
-    print("Elementi trovati per Zona 1:", numero)
-
-    for i in range(numero):
-
-        try:
-
-            elemento = elementi.nth(i)
-
-            print("")
-            print("--- ELEMENTO", i + 1, "---")
-
-            try:
-                print("Testo:", elemento.inner_text())
-            except:
-                print("Testo: non disponibile")
-
-            try:
-                print(
-                    "Tag:",
-                    elemento.evaluate(
-                        "(el) => el.tagName"
-                    )
-                )
-            except:
-                print("Tag: non disponibile")
-
-            try:
-                print(
-                    "Classe:",
-                    elemento.get_attribute("class")
-                )
-            except:
-                print("Classe: non disponibile")
-
-            try:
-                print(
-                    "ID:",
-                    elemento.get_attribute("id")
-                )
-            except:
-                print("ID: non disponibile")
-
-            try:
-                print(
-                    "Style:",
-                    elemento.get_attribute("style")
-                )
-            except:
-                print("Style: non disponibile")
-
-            try:
-                html = elemento.evaluate(
-                    "(el) => el.outerHTML"
-                )
-
-                print("HTML:")
-                print(html[:3000])
-
-            except:
-                print("HTML: non disponibile")
-
-        except Exception as errore:
-
-            print(
-                "Errore lettura elemento:",
-                errore
-            )
-
-
-# ============================================================
-# CONTROLLO PRINCIPALE
-# ============================================================
 
 print("================================================")
 print("MONITOR ALLERTA CAMPANIA - ZONA 1")
 print("================================================")
 
 print(
-    "Ora del controllo:",
-    datetime.now().strftime(
-        "%d/%m/%Y %H:%M:%S"
-    )
+    "Ora controllo:",
+    datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 )
-
 
 with sync_playwright() as p:
 
-    browser = p.chromium.launch(
-        headless=True
-    )
+    browser = p.chromium.launch(headless=True)
 
     page = browser.new_page(
         viewport={
             "width": 1440,
-            "height": 1000
+            "height": 1200
         }
     )
 
@@ -209,53 +91,180 @@ with sync_playwright() as p:
     print("Titolo:", page.title())
 
     print("")
-    print("Attendo il caricamento della mappa...")
-
+    print("Attendo il caricamento completo...")
     page.wait_for_timeout(10000)
 
     # ========================================================
-    # TESTO PAGINA
+    # TESTO
     # ========================================================
 
     testo = page.locator("body").inner_text()
 
-    print("")
-    print("Dimensione testo:", len(testo))
-
-    # ========================================================
-    # PERIODO DI VALIDITÀ
-    # ========================================================
-
     periodo = estrai_periodo_validita(testo)
 
+    print("")
+    print("================================================")
+    print("PERIODO DI VALIDITÀ")
+    print("================================================")
+
     if periodo:
-
-        print("")
-        print("PERIODO DI VALIDITÀ TROVATO:")
-
         print(
-            f"Dal {periodo['data_inizio']} "
-            f"alle {periodo['ora_inizio']}"
+            "Inizio:",
+            periodo["data_inizio"],
+            periodo["ora_inizio"]
         )
 
         print(
-            f"Al {periodo['data_fine']} "
-            f"alle {periodo['ora_fine']}"
+            "Fine:",
+            periodo["data_fine"],
+            periodo["ora_fine"]
         )
-
     else:
-
-        print("")
-        print("Periodo di validità non trovato.")
+        print("Periodo non trovato.")
 
     # ========================================================
-    # CERCA ZONA 1
+    # ELEMENTI SVG
     # ========================================================
 
-    stampa_elementi_zona1(page)
+    print("")
+    print("================================================")
+    print("ANALISI SVG / MAPPA")
+    print("================================================")
+
+    svg_count = page.locator("svg").count()
+
+    print("SVG trovati:", svg_count)
+
+    for i in range(svg_count):
+
+        svg = page.locator("svg").nth(i)
+
+        try:
+            box = svg.bounding_box()
+
+            print("")
+            print("----- SVG", i + 1, "-----")
+
+            print("Posizione:", box)
+
+            print(
+                "HTML:",
+                svg.evaluate(
+                    "(el) => el.outerHTML"
+                )[:5000]
+            )
+
+        except Exception as errore:
+
+            print(
+                "Errore SVG:",
+                errore
+            )
 
     # ========================================================
-    # SALVA TESTO DELLA PAGINA
+    # ELEMENTI CON COLORE
+    # ========================================================
+
+    print("")
+    print("================================================")
+    print("ANALISI ELEMENTI COLORATI")
+    print("================================================")
+
+    elementi = page.locator(
+        "[style], [fill], [class]"
+    )
+
+    totale = elementi.count()
+
+    print(
+        "Elementi analizzati:",
+        totale
+    )
+
+    trovati = 0
+
+    for i in range(min(totale, 1000)):
+
+        elemento = elementi.nth(i)
+
+        try:
+
+            style = elemento.get_attribute("style")
+            fill = elemento.get_attribute("fill")
+            classe = elemento.get_attribute("class")
+
+            valori = " ".join(
+                str(x)
+                for x in [
+                    style,
+                    fill,
+                    classe
+                ]
+                if x
+            ).lower()
+
+            colori = [
+                "green",
+                "lime",
+                "yellow",
+                "orange",
+                "red",
+                "rgb",
+                "#"
+            ]
+
+            if any(
+                colore in valori
+                for colore in colori
+            ):
+
+                trovati += 1
+
+                print("")
+                print("ELEMENTO COLORATO", trovati)
+
+                print("Tag:", elemento.evaluate(
+                    "(el) => el.tagName"
+                ))
+
+                print("Classe:", classe)
+                print("Fill:", fill)
+                print("Style:", style)
+
+                try:
+                    print(
+                        "Testo:",
+                        elemento.inner_text()
+                    )
+                except:
+                    pass
+
+                if trovati >= 100:
+                    break
+
+        except:
+            pass
+
+    print("")
+    print(
+        "Elementi colorati trovati:",
+        trovati
+    )
+
+    # ========================================================
+    # SCREENSHOT DELLA PAGINA
+    # ========================================================
+
+    print("")
+    print("Salvo screenshot della pagina...")
+
+    page.screenshot(
+        path="pagina_centro_funzionale.png",
+        full_page=True
+    )
+
+    # ========================================================
+    # SALVATAGGIO
     # ========================================================
 
     with open(
@@ -263,23 +272,16 @@ with sync_playwright() as p:
         "w",
         encoding="utf-8"
     ) as file:
-
         file.write(testo)
-
-    # ========================================================
-    # SALVA HTML DELLA PAGINA
-    # ========================================================
 
     with open(
         "pagina_centro_funzionale.html",
         "w",
         encoding="utf-8"
     ) as file:
-
         file.write(page.content())
 
     browser.close()
-
 
 print("")
 print("================================================")
