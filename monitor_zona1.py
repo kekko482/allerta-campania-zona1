@@ -1,4 +1,4 @@
-import urllib.request
+from playwright.sync_api import sync_playwright
 from datetime import datetime
 
 URL = "https://centrofunzionale.regione.campania.it/"
@@ -6,20 +6,23 @@ URL = "https://centrofunzionale.regione.campania.it/"
 print("Controllo del sito ufficiale della Regione Campania...")
 print("Ora del controllo:", datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
 
-request = urllib.request.Request(
-    URL,
-    headers={
-        "User-Agent": "Mozilla/5.0"
-    }
-)
+with sync_playwright() as p:
+    browser = p.chromium.launch(headless=True)
+    page = browser.new_page()
 
-with urllib.request.urlopen(request, timeout=30) as response:
-    html = response.read().decode("utf-8", errors="ignore")
+    page.goto(URL, wait_until="networkidle", timeout=60000)
 
-print("Sito raggiunto correttamente.")
-print("Dimensione pagina:", len(html), "caratteri")
+    print("Pagina caricata correttamente.")
+    print("Titolo:", page.title())
 
-with open("pagina_centro_funzionale.html", "w", encoding="utf-8") as file:
-    file.write(html)
+    testo = page.locator("body").inner_text()
 
-print("Pagina salvata nel file pagina_centro_funzionale.html")
+    print("=== TESTO DELLA PAGINA ===")
+    print(testo[:15000])
+
+    with open("pagina_centro_funzionale.txt", "w", encoding="utf-8") as f:
+        f.write(testo)
+
+    browser.close()
+
+print("Controllo terminato.")
