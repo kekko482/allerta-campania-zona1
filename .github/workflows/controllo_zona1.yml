@@ -18,8 +18,9 @@ jobs:
         run: |
           echo "Il controllo del sito è terminato."
           ls -l
-        - name: Salva pagina come artefatto
-          uses: actions/upload-artifact@v4
-          with:
-            name: pagina-centro-funzionale
-            path: pagina_centro_funzionale.html
+
+      - name: Salva pagina come artefatto
+        uses: actions/upload-artifact@v4
+        with:
+          name: pagina-centro-funzionale
+          path: pagina_centro_funzionale.html
